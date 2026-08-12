@@ -1,0 +1,12 @@
+# Godot 4 缓存（导入/UID 缓存）
+.godot/
+
+# 构建产物
+/build/
+
+# 导出物（Windows / Web）
+*.exe
+*.pck
+*.zip
+*.wasm
+Gems.*

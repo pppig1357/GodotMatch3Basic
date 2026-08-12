@@ -1,0 +1,184 @@
+[gd_scene load_steps=12 format=3 uid="uid://c8match3hud001"]
+
+[ext_resource type="Script" path="res://scripts/hud.gd" id="1_hud"]
+[ext_resource type="FontFile" path="res://assets/ui-kenney/Font/Kenney Future.ttf" id="2_font"]
+[ext_resource type="Texture2D" path="res://assets/ui-kenney/PNG/Yellow/Default/button_rectangle_depth_gradient.png" id="3_btn_y"]
+[ext_resource type="Texture2D" path="res://assets/ui-kenney/PNG/Yellow/Default/button_rectangle_depth_gloss.png" id="4_btn_y_h"]
+[ext_resource type="Texture2D" path="res://assets/ui-kenney/PNG/Yellow/Default/button_rectangle_depth_flat.png" id="5_panel_y"]
+[ext_resource type="Texture2D" path="res://assets/ui-kenney/PNG/Blue/Default/button_rectangle_depth_flat.png" id="6_btn_b"]
+[ext_resource type="Texture2D" path="res://assets/ui-kenney/PNG/Blue/Default/button_rectangle_depth_gradient.png" id="7_btn_b_h"]
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_start_n"]
+texture = ExtResource("3_btn_y")
+texture_margin_left = 14.0
+texture_margin_top = 14.0
+texture_margin_right = 14.0
+texture_margin_bottom = 14.0
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_start_h"]
+texture = ExtResource("4_btn_y_h")
+texture_margin_left = 14.0
+texture_margin_top = 14.0
+texture_margin_right = 14.0
+texture_margin_bottom = 14.0
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_restart_n"]
+texture = ExtResource("6_btn_b")
+texture_margin_left = 14.0
+texture_margin_top = 14.0
+texture_margin_right = 14.0
+texture_margin_bottom = 14.0
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_restart_h"]
+texture = ExtResource("7_btn_b_h")
+texture_margin_left = 14.0
+texture_margin_top = 14.0
+texture_margin_right = 14.0
+texture_margin_bottom = 14.0
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_check"]
+texture = ExtResource("6_btn_b")
+texture_margin_left = 14.0
+texture_margin_top = 14.0
+texture_margin_right = 14.0
+texture_margin_bottom = 14.0
+
+[node name="HUD" type="CanvasLayer"]
+script = ExtResource("1_hud")
+
+[node name="Mask" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+color = Color(0.1, 0.12, 0.16, 0.72)
+
+[node name="TitlePanel" type="NinePatchRect" parent="Mask"]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -220.0
+offset_top = -100.0
+offset_right = 220.0
+offset_bottom = 60.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("5_panel_y")
+patch_margin_left = 14
+patch_margin_top = 14
+patch_margin_right = 14
+patch_margin_bottom = 14
+
+[node name="ScoreLabel" type="Label" parent="."]
+visible = false
+offset_left = 16.0
+offset_top = 12.0
+offset_right = 280.0
+offset_bottom = 44.0
+theme_override_colors/font_color = Color(0.92, 0.93, 0.95, 1)
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 22
+text = "分数: 0"
+
+[node name="MovesLabel" type="Label" parent="."]
+visible = false
+offset_left = 16.0
+offset_top = 44.0
+offset_right = 280.0
+offset_bottom = 76.0
+theme_override_colors/font_color = Color(0.92, 0.93, 0.95, 1)
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 22
+text = "步数: ∞"
+
+[node name="RestartButton" type="Button" parent="."]
+visible = false
+offset_left = 480.0
+offset_top = 12.0
+offset_right = 624.0
+offset_bottom = 52.0
+theme_override_colors/font_color = Color(0.95, 0.97, 1, 1)
+theme_override_colors/font_hover_color = Color(0.95, 0.97, 1, 1)
+theme_override_colors/font_pressed_color = Color(0.95, 0.97, 1, 1)
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 18
+theme_override_styles/normal = SubResource("StyleBoxTexture_restart_n")
+theme_override_styles/hover = SubResource("StyleBoxTexture_restart_h")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_restart_h")
+theme_override_styles/focus = SubResource("StyleBoxTexture_restart_n")
+text = "重新开始"
+
+[node name="Message" type="Label" parent="."]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -200.0
+offset_top = -80.0
+offset_right = 200.0
+offset_bottom = 40.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_color = Color(0.12, 0.1, 0.05, 1)
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 28
+text = "宝石迷阵三消"
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 2
+
+[node name="MovesLimitedCheck" type="CheckButton" parent="."]
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -140.0
+offset_top = -200.0
+offset_right = 140.0
+offset_bottom = -160.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_colors/font_color = Color(0.95, 0.97, 1, 1)
+theme_override_colors/font_hover_color = Color(0.95, 0.97, 1, 1)
+theme_override_colors/font_pressed_color = Color(0.95, 0.97, 1, 1)
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 18
+theme_override_styles/normal = SubResource("StyleBoxTexture_check")
+theme_override_styles/hover = SubResource("StyleBoxTexture_restart_h")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_restart_h")
+theme_override_styles/focus = SubResource("StyleBoxTexture_check")
+text = "限步模式（20 步）"
+
+[node name="StartButton" type="Button" parent="."]
+custom_minimum_size = Vector2(200, 56)
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -100.0
+offset_top = -140.0
+offset_right = 100.0
+offset_bottom = -84.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_colors/font_color = Color(0.15, 0.12, 0.05, 1)
+theme_override_colors/font_hover_color = Color(0.15, 0.12, 0.05, 1)
+theme_override_colors/font_pressed_color = Color(0.15, 0.12, 0.05, 1)
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 22
+theme_override_styles/normal = SubResource("StyleBoxTexture_start_n")
+theme_override_styles/hover = SubResource("StyleBoxTexture_start_h")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_start_h")
+theme_override_styles/focus = SubResource("StyleBoxTexture_start_n")
+text = "开始游戏"
+
+[connection signal="pressed" from="RestartButton" to="." method="_on_restart_button_pressed"]
+[connection signal="pressed" from="StartButton" to="." method="_on_start_button_pressed"]
