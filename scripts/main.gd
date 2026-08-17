@@ -1,204 +1,143 @@
 extends Node2D
-## 主场景（对齐官方教程）：HUD 信号开局、AudioStreamPlayer 播音乐/音效。
+## ============================================================
+## main.gd —— 游戏「指挥中心」（主场景脚本）
+## ============================================================
+## 角色定位：Main 是主场景的大脑，负责三件事——
+##   1. 接收 HUD 的按钮信号（开始游戏 / 重新开始）
+##   2. 处理鼠标输入（点哪颗宝石、要不要交换）
+##   3. 指挥 Board 干活（开局、交换、结算）——自己不碰棋盘数据
+##
+## 代码块划分（课件可拆块讲解）：
+##   ① 状态枚举 State        —— 游戏当前处于什么阶段
+##   ② 节点引用              —— 怎么拿到 Board / HUD
+##   ③ _ready 信号连接       —— HUD 按钮 → 这里的函数
+##   ④ new_game 新一局       —— 开局流程
+##   ⑤ _unhandled_input 输入 —— 鼠标点击入口
+##   ⑥ _on_pointer_down 点选 —— 交互核心规则
+##   ⑦ 选中/取消辅助函数     —— _select / _deselect
+##   ⑧ _do_swap 交换流程     —— 调 Board 完成一次交换
+## ============================================================
 
-enum State { WAITING, IDLE, SELECTED, SWAPPING, RESOLVING, GAME_OVER }
+## 游戏状态机：任何时刻游戏都处于其中一个状态（同一时间只有一个）
+## IDLE      = 空闲，等待玩家点击（标题界面和对局中都可能处于它）
+## SELECTED  = 已选中一颗宝石，等待下一步（交换/取消/换选）
+## SWAPPING  = 交换动画播放中 → 锁输入，防止连点出 bug
+## RESOLVING = 消除/下落动画播放中 → 锁输入
+enum State { IDLE, SELECTED, SWAPPING, RESOLVING }
 
+## 预加载 board.gd 脚本，用它给 board 变量标注类型（相当于一张"说明书"）
 const BoardScript = preload("res://scripts/board.gd")
-const DRAG_SWAP_THRESHOLD := 28.0
 
+## @onready：等场景节点全部就绪后才赋值（比直接 var 更安全）
+## $Board = 场景树里叫 Board 的节点（棋盘，规则权威）
+## $HUD   = 场景树里叫 HUD 的节点（界面层）
 @onready var board: BoardScript = $Board
 @onready var hud: CanvasLayer = $HUD
 
-var state: int = State.WAITING
+## 当前状态：初始 IDLE（游戏刚打开 = 标题界面）
+var state: int = State.IDLE
+## 当前选中的宝石；null = 没有选中任何宝石
 var selected: Gem = null
-var _dragging: bool = false
-var _press_world: Vector2 = Vector2.ZERO
-var _gem_home: Vector2 = Vector2.ZERO
-var _drag_swapped: bool = false
 
 
 func _ready() -> void:
-	# 官方教程写法：HUD 发信号，Main 开局；Music 循环
-	hud.start_game.connect(new_game)
-	hud.back_to_title.connect(_on_back_to_title)
-	board.score_changed.connect(hud.update_score)
-	board.moves_changed.connect(_on_moves_changed)
-	board.match_cleared.connect(_on_match_cleared)
-	_setup_music_loop()
-	hud.update_score(board.score)
-	hud.update_moves(board.moves_limited, board.moves_left)
-	$Music.play()
+	## 信号连接（观察者模式）：HUD/Board 发信号 → 这里接住执行
+	## HUD 不直接认识 Main 的函数，只负责"喊一声"，实现界面与逻辑解耦
+	hud.start_game.connect(new_game)               # 点「开始游戏」→ 开新局
+	hud.restart.connect(new_game)                  # 点「重新开始」→ 也是开新局（简化版不回标题）
+	board.score_changed.connect(hud.update_score)  # Board 分数变化 → HUD 刷新显示
+	board.match_cleared.connect(_on_match_cleared) # Board 开始消除 → 播放消除音效
+	_setup_music_loop()                            # BGM 设为循环播放
+	hud.update_score(board.score)                  # 初始显示分数 0
+	$Music.play()                                  # 开始播 BGM
 
 
+## 消除音效：Board 每次开始消除都会 emit match_cleared 信号
 func _on_match_cleared() -> void:
 	$SfxClear.play()
 
 
+## BGM 循环：把音乐资源的 loop 属性设为 true（无缝循环）
 func _setup_music_loop() -> void:
 	if $Music.stream is AudioStreamOggVorbis:
 		($Music.stream as AudioStreamOggVorbis).loop = true
 
 
-## 新一局（对应教程 new_game）
-func new_game(limited: bool) -> void:
-	_cancel_drag()
-	_deselect()
-	board.reset_game(limited)
-	hud.prepare_playing()
-	hud.update_score(board.score)
-	hud.update_moves(board.moves_limited, board.moves_left)
-	state = State.IDLE
-	$SfxClick.play()
-	if not $Music.playing:
+## 新一局（对应官方教程 new_game 的写法）
+func new_game() -> void:
+	_deselect()                       # 清掉可能残留的选中态
+	board.reset_game()                # 核心活交给 Board：重建棋盘 + 重置分数
+	hud.prepare_playing()             # HUD 切换成对局界面（隐藏标题遮罩）
+	hud.update_score(board.score)     # 分数归零显示
+	state = State.IDLE                # 状态复位，开始接收点击
+	$SfxClick.play()                  # 按钮点击音效
+	if not $Music.playing:            # BGM 没在播就播
 		$Music.play()
 
 
-func _on_back_to_title() -> void:
-	_cancel_drag()
-	_deselect()
-	board.clear_board()
-	state = State.WAITING
-	$SfxClick.play()
-
-
-func _on_moves_changed(moves: int) -> void:
-	hud.update_moves(board.moves_limited, moves)
-
-
+## 输入处理：所有没被 UI 控件消费的输入都会进这个函数
+## event.is_action_pressed("click") = InputMap 里名为 click 的动作（鼠标左键）
+## 用「动作名」判断而不是「具体按键」：以后想改成触摸/键盘，只需改配置，不用改代码
 func _unhandled_input(event: InputEvent) -> void:
-	if state == State.WAITING or state == State.SWAPPING \
-			or state == State.RESOLVING or state == State.GAME_OVER:
+	# 动画播放中（SWAPPING/RESOLVING）直接忽略输入——状态锁，防止连点
+	if state == State.SWAPPING or state == State.RESOLVING:
 		return
-	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
-		if event.pressed:
-			await _on_pointer_down()
-		else:
-			_on_pointer_up()
-		return
-	if event is InputEventMouseMotion and _dragging and selected != null:
-		await _on_pointer_drag()
+	if event.is_action_pressed("click"):
+		await _on_pointer_down()
 
 
-## 交互规则（v2.1 正式化）：
-## - IDLE 点击宝石 → 选中 + 进入可拖拽态
-## - SELECTED 点击已选中 → 取消选中回 IDLE
-## - SELECTED 点击相邻 → 交换；点击非相邻 → 换选 + 可拖拽态
-## - 选中后按下并移动 → 拖拽交换（28px 阈值）；原地松开 → 保持选中
-## 教学点：拖拽 =「按下+位移」连续输入；点选交换 = 离散输入 —— 两种模式并存。
+## 点选交互（核心规则，课件"交互规则表"）：
+## - IDLE 点击宝石      → 选中它（进入 SELECTED）
+## - SELECTED 点自己    → 取消选中（回 IDLE）
+## - SELECTED 点相邻    → 交换两颗（核心玩法）
+## - SELECTED 点非相邻  → 换成选那颗
+## - 点击空白           → 取消选中
 func _on_pointer_down() -> void:
-	var world := get_global_mouse_position()
-	var clicked: Gem = board.get_gem_at(board.world_to_grid(world))
-	_drag_swapped = false
-	_press_world = world
-	if clicked == null:
-		_cancel_drag()
+	var world := get_global_mouse_position()                     # 鼠标的屏幕坐标
+	var clicked: Gem = board.get_gem_at(board.world_to_grid(world))  # 坐标换算→取那颗宝石
+	if clicked == null:                                          # 点到空白（棋盘外）
 		_deselect()
 		state = State.IDLE
 		return
 	if state == State.SELECTED and selected != null:
-		if clicked == selected:
-			# 再次点击已选中宝石 → 取消选中（不进入拖拽）
-			_cancel_drag()
+		if clicked == selected:                                  # ① 点自己 → 取消选中
 			_deselect()
 			state = State.IDLE
 			$SfxClick.play()
 			return
-		if _is_adjacent(selected, clicked):
+		if board.is_adjacent(selected, clicked):                 # ② 点相邻 → 交换（相邻判断由 Board 负责）
 			await _do_swap(selected, clicked)
 			return
-		_deselect()
+		_deselect()                                              # ③ 点非相邻 → 换成选它
 		_select(clicked)
-		_start_drag_on_selected()
 		$SfxSelect.play()
 		return
-	_select(clicked)
+	_select(clicked)                                             # 空闲状态点宝石 → 选中
 	state = State.SELECTED
-	_start_drag_on_selected()
 	$SfxSelect.play()
 
 
-func _start_drag_on_selected() -> void:
-	if selected == null:
-		return
-	_dragging = true
-	_gem_home = board.grid_to_world(selected.grid_pos)
-	_press_world = get_global_mouse_position()
-
-
-func _on_pointer_drag() -> void:
-	if selected == null or _drag_swapped:
-		return
-	var delta: Vector2 = get_global_mouse_position() - _press_world
-	selected.position = _gem_home + _clamp_drag_offset(delta)
-	var dir := _drag_direction(delta)
-	if dir == Vector2i.ZERO:
-		return
-	var other: Gem = board.get_gem_at(selected.grid_pos + dir)
-	if other == null:
-		return
-	_drag_swapped = true
-	_dragging = false
-	selected.position = _gem_home
-	await _do_swap(selected, other)
-
-
-func _on_pointer_up() -> void:
-	if state == State.SWAPPING or state == State.RESOLVING:
-		_dragging = false
-		return
-	if _drag_swapped:
-		_dragging = false
-		_drag_swapped = false
-		return
-	if not _dragging or selected == null:
-		_dragging = false
-		return
-	selected.position = _gem_home
-	_dragging = false
-	state = State.SELECTED
-
-
-func _clamp_drag_offset(delta: Vector2) -> Vector2:
-	var cell: float = float(board.CELL_SIZE)
-	if absf(delta.x) >= absf(delta.y):
-		return Vector2(clampf(delta.x, -cell, cell), 0.0)
-	return Vector2(0.0, clampf(delta.y, -cell, cell))
-
-
-func _drag_direction(delta: Vector2) -> Vector2i:
-	if absf(delta.x) < DRAG_SWAP_THRESHOLD and absf(delta.y) < DRAG_SWAP_THRESHOLD:
-		return Vector2i.ZERO
-	if absf(delta.x) >= absf(delta.y):
-		return Vector2i(1 if delta.x > 0.0 else -1, 0)
-	return Vector2i(0, 1 if delta.y > 0.0 else -1)
-
-
-func _cancel_drag() -> void:
-	if selected != null and is_instance_valid(selected):
-		selected.position = board.grid_to_world(selected.grid_pos)
-	_dragging = false
-	_drag_swapped = false
-
-
-func _is_adjacent(a: Gem, b: Gem) -> bool:
-	return absi(a.grid_pos.x - b.grid_pos.x) + absi(a.grid_pos.y - b.grid_pos.y) == 1
-
-
+## 选中：记录引用 + 点亮遮罩（视觉反馈）
 func _select(gem: Gem) -> void:
 	selected = gem
 	if selected != null:
 		selected.set_selected(true)
 
 
+## 取消选中：熄灭遮罩 + 清空记录
 func _deselect() -> void:
 	if selected != null and is_instance_valid(selected):
 		selected.set_selected(false)
 	selected = null
 
 
+## 交换流程（只管流程，规则判定在 Board.try_swap）：
+## 1. 状态切 SWAPPING（锁输入）
+## 2. 让 Board 尝试交换（播放动画 + 判定是否有匹配）
+## 3. 成功 → 切 RESOLVING，等 Board 结算完（消除/下落/连锁）→ 回 IDLE
+## 4. 失败（交换后无匹配）→ 直接回 IDLE（Board 已自动弹回原位）
 func _do_swap(a: Gem, b: Gem) -> void:
 	state = State.SWAPPING
-	_cancel_drag()
 	_deselect()
 	$SfxSwap.play()
 	var ok: bool = await board.try_swap(a, b)
@@ -207,9 +146,4 @@ func _do_swap(a: Gem, b: Gem) -> void:
 		return
 	state = State.RESOLVING
 	await board.resolve_board()
-	if board.moves_limited and board.moves_left <= 0:
-		state = State.GAME_OVER
-		$Music.stop()
-		hud.show_game_over(board.score)
-	else:
-		state = State.IDLE
+	state = State.IDLE

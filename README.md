@@ -6,12 +6,11 @@ Infoco 编程社 × 独游社 联合社课成品。引擎：**Godot 4.7**（GDSc
 
 ## 玩法
 
-- 点击选中宝石，再点相邻宝石交换；**或按住拖动交换**（28px 阈值，视觉跟随限一格）
-- 再点已选中宝石 → 取消选中
+- 点击选中宝石，再点相邻宝石交换；再点已选中宝石取消选中
 - 横/竖连续 ≥3 同色消除，上方下落并顶部补新，可连锁
 - 计分：每组 3 个 30 分，多 1 个 +10；连锁倍率 ×n
 - 开局自动排除死局（无可行步则重排）
-- **限步模式可选**：开始界面勾选「限步模式（20 步）」后，成功交换才扣步，步数用尽结算；默认无限步
+- 无限步模式，自由游玩；右上角「重新开始」随时开新局
 
 ## 运行
 
@@ -33,12 +32,12 @@ Infoco 编程社 × 独游社 联合社课成品。引擎：**Godot 4.7**（GDSc
 
 ```
 scenes/main.tscn, hud.tscn, gem.tscn
-scripts/main.gd, hud.gd, board.gd, board_resolve.gd, gem.gd
+scripts/main.gd, hud.gd, board.gd, gem.gd
 assets/sprites/gems/          # 宝石 sprite sheet（gem_bomb_rainbow.png）
 assets/ui-kenney/             # Kenney UI（按钮图/字体/音效，按引用精简）
 ```
 
-> **BGM**：House In a Forest Loop 音频数据内嵌于 `scenes/main.tscn`（OggPacketSequence），来自 Godot 官方示例项目 Dodge the Creeps 自带（原作者 Kenney，CC0）。外部 .ogg 未随仓库提供，详见 `assets/素材清单.md`。
+> **BGM**：为外部引用 `assets/House In a Forest Loop.ogg`，随仓库提供；来自 Godot 官方示例项目 Dodge the Creeps 自带（原作者 Kenney，CC0）。
 
 UI / 音频对齐官方「您的第一个 2D 游戏」写法：`HUD` 独立场景用信号开局；`Music` / `Sfx*` 为 Main 下的 AudioStreamPlayer。
 

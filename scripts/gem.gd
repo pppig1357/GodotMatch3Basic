@@ -1,119 +1,73 @@
 extends Node2D
-## 单个宝石：AnimatedSprite2D 贴图 + 半透明选中遮罩。
-## 教学点：sprite sheet 切帧 → SpriteFrames → 按类型播放旋转动画。
+## ============================================================
+## gem.gd —— 游戏「棋子」（单颗宝石）
+## ============================================================
+## 角色定位：一颗宝石长什么样、怎么动。它自己不决定游戏规则，
+## 只提供"表现"能力，被 board.gd 和 main.gd 调用。
+##
+## 代码块划分（课件可拆块讲解）：
+##   ① 类型枚举 + 贴图     —— 六色怎么表示、贴图从哪来
+##   ② 初始化             —— setup / set_type
+##   ③ 选中反馈           —— set_selected（半透明白遮罩）
+##   ④ 动画三件套         —— 交换 / 消除 / 下落
+## ============================================================
 class_name Gem
 
-## 六种宝石颜色
+## 六种宝石颜色（枚举 = 一组有名字的整数常量）
+## RED=0, BLUE=1, GREEN=2, YELLOW=3, PURPLE=4, ORANGE=5
 enum GemType { RED, BLUE, GREEN, YELLOW, PURPLE, ORANGE }
 
-const SHEET := preload("res://assets/sprites/gems/gem_bomb_rainbow.png")
-const FRAME_SIZE := 52
-const FRAMES_PER_ANIM := 40
-## 每色三行（宝石/心/环），只用几何宝石行
-const GEM_ROW := {
-	GemType.BLUE: 0,
-	GemType.GREEN: 3,
-	GemType.ORANGE: 6,
-	GemType.PURPLE: 9,
-	GemType.RED: 12,
-	GemType.YELLOW: 18,
-}
-const ANIM_NAME := {
-	GemType.RED: "red",
-	GemType.BLUE: "blue",
-	GemType.GREEN: "green",
-	GemType.YELLOW: "yellow",
-	GemType.PURPLE: "purple",
-	GemType.ORANGE: "orange",
-}
+## 六色贴图数组：在 gem.tscn 场景里按 enum 顺序挂好 6 张 PNG
+## （索引 0 对应 RED，1 对应 BLUE…换贴图只需这一行数组，不写代码）
+@export var gem_textures: Array[Texture2D] = []
 
-## 全宝石共享一份 SpriteFrames（只切一次）
-static var _shared_frames: SpriteFrames = null
-
-## 当前宝石类型
+## 当前宝石类型（默认红色）
 var type: int = GemType.RED
-## 网格坐标 (col, row)
+## 网格坐标 (col, row)——它在棋盘的哪一格
 var grid_pos: Vector2i = Vector2i.ZERO
 
-@onready var _sprite: AnimatedSprite2D = $Sprite
+## @onready：进场景树后才取子节点
+## $Sprite     = 显示贴图的精灵节点（贴图是场景里挂的资源，不是代码画的）
+## $SelectMask = 选中遮罩（半透明白色方块，选中时显示）
+@onready var _sprite: Sprite2D = $Sprite
 @onready var _select_mask: ColorRect = $SelectMask
-var _cell_size: int = 64
 
 
-## 构建六色旋转动画（静态，全局一次）
-static func _build_frames() -> SpriteFrames:
-	var frames := SpriteFrames.new()
-	for gem_type in GEM_ROW.keys():
-		var anim: String = ANIM_NAME[gem_type]
-		var row: int = GEM_ROW[gem_type]
-		frames.add_animation(anim)
-		frames.set_animation_speed(anim, 12.0)
-		frames.set_animation_loop(anim, true)
-		for i in range(FRAMES_PER_ANIM):
-			var atlas := AtlasTexture.new()
-			atlas.atlas = SHEET
-			atlas.region = Rect2(i * FRAME_SIZE, row * FRAME_SIZE, FRAME_SIZE, FRAME_SIZE)
-			frames.add_frame(anim, atlas)
-	return frames
-
-
-static func get_shared_frames() -> SpriteFrames:
-	if _shared_frames == null:
-		_shared_frames = _build_frames()
-	return _shared_frames
-
-
-## 初始化：尺寸、贴图动画、类型
-func setup(gem_type: int, pos: Vector2i, cell_size: int, _colors: Dictionary) -> void:
+## 初始化：设置类型 + 网格坐标（由 board._spawn_gem 在创建时调用）
+func setup(gem_type: int, pos: Vector2i) -> void:
 	type = gem_type
 	grid_pos = pos
-	_cell_size = cell_size
-	var cell := Vector2(_cell_size, _cell_size)
-	if _select_mask != null:
-		_select_mask.size = cell
-	if _sprite != null:
-		_sprite.sprite_frames = get_shared_frames()
-		_sprite.centered = false
-		# 52px 贴图缩放到格子大小
-		var s: float = float(_cell_size) / float(FRAME_SIZE)
-		_sprite.scale = Vector2(s, s)
-	set_type(gem_type, _colors)
+	set_type(gem_type)      # 立刻换上对应颜色的贴图
 
 
-## 更换类型并播放对应旋转动画
-func set_type(gem_type: int, _colors: Dictionary) -> void:
+## 更换类型：换一张贴图（ensure_no_initial_matches 换色时也会调用）
+func set_type(gem_type: int) -> void:
 	type = gem_type
-	if _sprite == null:
-		return
-	if _sprite.sprite_frames == null:
-		_sprite.sprite_frames = get_shared_frames()
-	var anim: String = ANIM_NAME[gem_type]
-	_sprite.play(anim)
+	_sprite.texture = gem_textures[gem_type]   # 从数组里取对应颜色的贴图
 
 
-## 选中反馈：半透明白色遮罩
+## 选中反馈：true 亮遮罩 / false 熄遮罩
 func set_selected(on: bool) -> void:
-	if _select_mask != null:
-		_select_mask.visible = on
+	_select_mask.visible = on
 
 
-## 滑动交换
+## 动画①：滑动交换（移动到目标位置，0.15 秒）
 func animate_swap_to(target: Vector2) -> void:
 	var tween := create_tween()
 	tween.tween_property(self, "position", target, 0.15)
-	await tween.finished
+	await tween.finished    # 等动画播完才返回（模板 T3：动画必须 await 串行）
 
 
-## 消除：缩小 + 淡出
+## 动画②：消除（缩小到 0.2 倍 + 淡出到透明，0.2 秒，两个效果同时进行）
 func animate_clear() -> void:
 	var tween := create_tween()
-	tween.set_parallel(true)
+	tween.set_parallel(true)    # 并行模式：缩小和淡出一起播
 	tween.tween_property(self, "scale", Vector2(0.2, 0.2), 0.2)
-	tween.tween_property(self, "modulate:a", 0.0, 0.2)
+	tween.tween_property(self, "modulate:a", 0.0, 0.2)   # modulate:a = 透明度
 	await tween.finished
 
 
-## 下落
+## 动画③：下落（移动到目标位置，时长由下落格数决定——格数多花的时间长）
 func animate_fall_to(target: Vector2, duration: float) -> void:
 	var tween := create_tween()
 	tween.tween_property(self, "position", target, duration)

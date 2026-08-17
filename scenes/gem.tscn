@@ -1,14 +1,23 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene format=3 uid="uid://b1vphhabdwk5n"]
 
 [ext_resource type="Script" uid="uid://bft8bq3jrx54n" path="res://scripts/gem.gd" id="1_gem"]
+[ext_resource type="Texture2D" uid="uid://tokm2tybg8pn" path="res://assets/sprites/gems/gem_red.png" id="2_red"]
+[ext_resource type="Texture2D" uid="uid://b50mhhpoq73iv" path="res://assets/sprites/gems/gem_blue.png" id="3_blue"]
+[ext_resource type="Texture2D" uid="uid://chwlj235v4rfx" path="res://assets/sprites/gems/gem_green.png" id="4_green"]
+[ext_resource type="Texture2D" uid="uid://brqipgavbsjqs" path="res://assets/sprites/gems/gem_yellow.png" id="5_yellow"]
+[ext_resource type="Texture2D" uid="uid://b270cde2kc55h" path="res://assets/sprites/gems/gem_purple.png" id="6_purple"]
+[ext_resource type="Texture2D" uid="uid://bu6o28bdewytk" path="res://assets/sprites/gems/gem_orange.png" id="7_orange"]
 
-[node name="Gem" type="Node2D"]
+[node name="Gem" type="Node2D" unique_id=1994961712]
 script = ExtResource("1_gem")
+gem_textures = Array[Texture2D]([ExtResource("2_red"), ExtResource("3_blue"), ExtResource("4_green"), ExtResource("5_yellow"), ExtResource("6_purple"), ExtResource("7_orange")])
 
-[node name="Sprite" type="AnimatedSprite2D" parent="."]
+[node name="Sprite" type="Sprite2D" parent="." unique_id=810847095]
+scale = Vector2(1.2308, 1.2308)
+texture = ExtResource("2_red")
 centered = false
 
-[node name="SelectMask" type="ColorRect" parent="."]
+[node name="SelectMask" type="ColorRect" parent="." unique_id=32966338]
 visible = false
 offset_right = 64.0
 offset_bottom = 64.0
