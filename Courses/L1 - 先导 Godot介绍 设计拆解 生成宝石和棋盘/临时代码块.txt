@@ -1,0 +1,45 @@
+func find_matches() -> Array:
+	var matched: Array = []
+	# 横向：逐行扫，找连续同色段
+	for row in range(GRID_SIZE):
+		var run_start := 0
+		while run_start < GRID_SIZE:
+			var gem0: Gem = grid[run_start][row] as Gem
+			if gem0 == null:
+				run_start += 1
+				continue
+			var run_type: int = gem0.type
+			var run_end := run_start + 1
+			while run_end < GRID_SIZE:
+				var g: Gem = grid[run_end][row] as Gem
+				if g == null or g.type != run_type:
+					break
+				run_end += 1
+			if run_end - run_start >= 3:
+				for c in range(run_start, run_end):
+					_add_unique(matched, grid[c][row] as Gem)
+			run_start = run_end
+	# 纵向：逐列扫，逻辑同上（col/row 互换）
+	for col in range(GRID_SIZE):
+		var run_start := 0
+		while run_start < GRID_SIZE:
+			var gem0: Gem = grid[col][run_start] as Gem
+			if gem0 == null:
+				run_start += 1
+				continue
+			var run_type: int = gem0.type
+			var run_end := run_start + 1
+			while run_end < GRID_SIZE:
+				var g: Gem = grid[col][run_end] as Gem
+				if g == null or g.type != run_type:
+					break
+				run_end += 1
+			if run_end - run_start >= 3:
+				for r in range(run_start, run_end):
+					_add_unique(matched, grid[col][r] as Gem)
+			run_start = run_end
+	return matched
+
+func _add_unique(arr: Array, gem: Gem) -> void:
+	if gem != null and not arr.has(gem):
+		arr.append(gem)
