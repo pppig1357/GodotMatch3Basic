@@ -240,7 +240,7 @@ func _spawn_gem(gem_type: int, pos: Vector2i) -> Gem:
 |------|---------|
 | board.gd | ①信号常量 ②变量 ③reset_game ④坐标换算 ⑤棋盘生成 ⑥匹配判定 ⑦防死局 ⑧交换 ⑨结算循环 ⑩消除计分 ⑪下落填充 |
 | main.gd | ①状态枚举 ②节点引用 ③信号连接 ④new_game ⑤输入 ⑥点选交互 ⑦选中辅助 ⑧交换流程 |
-| gem.gd | ①类型+贴图 ②初始化 ③选中反馈 ④动画三件套 |
+| gem.gd | ①类型+贴图 ②初始化 ③选中反馈 ④动画（animate_clear） |
 | hud.gd | ①信号+引用 ②prepare_playing ③update_score ④按钮信号 |
 
 **作用**：学员随时知道"我们在代码的哪个位置"，跟丢了能自己找回来——PPT 上讲代码的最大痛点。

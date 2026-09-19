@@ -6,10 +6,10 @@ extends Node2D
 ## 只提供"表现"能力，被 board.gd 和 main.gd 调用。
 ##
 ## 代码块划分（课件可拆块讲解）：
-##   ① 类型枚举 + 贴图     —— 六色怎么表示、贴图从哪来
-##   ② 初始化             —— setup / set_type
-##   ③ 选中反馈           —— set_selected（半透明白遮罩）
-##   ④ 动画三件套         —— 交换 / 消除 / 下落
+##   ① 类型枚举 + 贴图      —— 六色怎么表示、贴图从哪来
+##   ② 初始化              —— setup / set_type
+##   ③ 选中反馈            —— set_selected（半透明白遮罩）
+##   ④ 动画               ——  消除 
 ## ============================================================
 class_name Gem
 
@@ -50,25 +50,10 @@ func set_type(gem_type: int) -> void:
 func set_selected(on: bool) -> void:
 	_select_mask.visible = on
 
-
-## 动画①：滑动交换（移动到目标位置，0.15 秒）
-func animate_swap_to(target: Vector2) -> void:
-	var tween := create_tween()
-	tween.tween_property(self, "position", target, 0.15)
-	await tween.finished    # 等动画播完才返回（模板 T3：动画必须 await 串行）
-
-
-## 动画②：消除（缩小到 0.2 倍 + 淡出到透明，0.2 秒，两个效果同时进行）
+## 动画：消除（缩小到 0.2 倍 + 淡出到透明，0.2 秒，两个效果同时进行）
 func animate_clear() -> void:
 	var tween := create_tween()
 	tween.set_parallel(true)    # 并行模式：缩小和淡出一起播
 	tween.tween_property(self, "scale", Vector2(0.2, 0.2), 0.2)
 	tween.tween_property(self, "modulate:a", 0.0, 0.2)   # modulate:a = 透明度
-	await tween.finished
-
-
-## 动画③：下落（移动到目标位置，时长由下落格数决定——格数多花的时间长）
-func animate_fall_to(target: Vector2, duration: float) -> void:
-	var tween := create_tween()
-	tween.tween_property(self, "position", target, duration)
 	await tween.finished
